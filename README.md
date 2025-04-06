@@ -18,3 +18,10 @@ Solution RGPD pour conversations avec modèles IA personnalisés.
 
 ## Licence
 Ce projet combine deux innovations protégées par une licence MIT modifiée avec clause de non-concurrence.
+
+CLARIFICATION LÉGALE:
+
+- Le modèle GreenSEO est une version personnalisée de Mistral 7B, entraînée localement pour des besoins spécifiques selon les termes de la licence Mistral permissive.
+- Cette personnalisation est réalisée grâce à des techniques de fine-tuning sur des données propres et publiques.
+- OllamaRGPDSaver est un outil original développé indépendamment pour archiver les conversations.
+- L'ensemble est déployé localement, sans dépendance cloud, garantissant la confidentialité des données clients conformément au RGPD.
