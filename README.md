@@ -1,3 +1,6 @@
+[![License: MIT+NC](https://img.shields.io/badge/License-MIT%2BNC-blue.svg)](LICENSE)
+[![RGPD Compliant](https://img.shields.io/badge/RGPD-Compliant-green.svg)](https://www.cnil.fr/fr/rgpd)
+
 # 🔒 OllamaRGPDSaver & GreenSEO IA
 
 # 🌱 GreenSEO-AI
