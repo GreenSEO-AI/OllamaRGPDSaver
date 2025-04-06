@@ -1,76 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Sauvegarde automatique RGPD pour Ollama WebUI
+Sauvegarde manuelle RGPD pour Ollama WebUI
 - Fonctionne entièrement en local
 - Ne partage aucune donnée
 - Compatible avec les exigences RGPD françaises
-- Surveille le dossier de téléchargement pour les conversations Ollama
 """
 
 import os
-import time
-import shutil
 import re
 import datetime
+import shutil
 from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
-class OllamaConversationHandler(FileSystemEventHandler):
-    """Gestionnaire de sauvegarde RGPD pour conversations Ollama"""
+class OllamaManualSaver:
+    """Conversion manuelle des fichiers de conversation Ollama"""
     
-    def __init__(self, source_dir, destination_dir="Txt-AI"):
-        """Initialisation avec dossiers source et destination"""
-        self.source_dir = Path(source_dir)
+    def __init__(self, destination_dir="C:\\Modelfile\\TXT-SEO"):
+        """Initialisation avec dossier destination"""
         self.destination_dir = Path(destination_dir)
         self.destination_dir.mkdir(parents=True, exist_ok=True)
-        self.processed_files = set()
-        print(f"🔒 Surveillance RGPD initialisée")
-        print(f"📂 Dossier source: {self.source_dir}")
+        print(f"🔒 Sauvegarde RGPD initialisée")
         print(f"📂 Dossier destination: {self.destination_dir}")
     
-    def on_created(self, event):
-        """Gère les nouveaux fichiers dans le dossier de téléchargement"""
-        if event.is_directory:
-            return
-            
-        file_path = Path(event.src_path)
-        
-        # Ignore les fichiers temporaires et déjà traités
-        if file_path.name.startswith('.') or file_path in self.processed_files:
-            return
-            
-        # Vérifier si c'est un fichier de conversation Ollama
-        if self._is_ollama_conversation(file_path):
-            self._process_conversation_file(file_path)
-    
-    def _is_ollama_conversation(self, file_path):
-        """Vérifie si le fichier est une conversation Ollama"""
-        if not file_path.suffix.lower() == '.txt':
-            return False
-            
-        # Vérifier le nom ou le contenu du fichier
-        if re.search(r'(chat-|GreenSEO|ollama|conversation)', file_path.name, re.IGNORECASE):
-            return True
-            
-        # Vérifier le contenu si nécessaire
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read(500)  # Lire les premiers caractères
-                if any(marker in content for marker in ['You:', 'Assistant:', 'User:', 'Vous:', 'GreenSEO']):
-                    return True
-        except:
-            pass
-            
-        return False
-    
-    def _process_conversation_file(self, file_path):
+    def process_conversation_file(self, file_path):
         """Traite et sauvegarde une conversation au format souhaité"""
         try:
-            # Marquer comme traité pour éviter les doublons
-            self.processed_files.add(file_path)
+            file_path = Path(file_path)
             
+            if not file_path.exists():
+                print(f"❌ Fichier non trouvé: {file_path}")
+                return False
+                
             # Lire le contenu original
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -88,7 +49,7 @@ class OllamaConversationHandler(FileSystemEventHandler):
             date_formatted = now.strftime("%d/%m/%Y %H:%M")
             new_filename = f"vie_privee_{date_str}_{title}.txt"
             
-            # Formatter le contenu selon tes préférences
+            # Formatter le contenu selon les marqueurs spécifiques
             formatted_content = self._format_content(content, date_formatted)
             
             # Créer le chemin de destination
@@ -98,116 +59,93 @@ class OllamaConversationHandler(FileSystemEventHandler):
             with open(dest_path, 'w', encoding='utf-8') as f:
                 f.write(formatted_content)
                 
-            print(f"✅ Conversation sauvegardée: {new_filename}")
-            
-            # Option: supprimer le fichier original
-            # os.remove(file_path)
+            print(f"✅ Conversation sauvegardée: {dest_path}")
+            return True
             
         except Exception as e:
-            print(f"❌ Erreur traitement fichier {file_path.name}: {str(e)}")
+            print(f"❌ Erreur traitement fichier: {str(e)}")
+            return False
     
     def _format_content(self, content, date_formatted):
-        """Formate le contenu d'une conversation"""
-        # Analyse du contenu original pour le convertir au format souhaité
+        """Formate le contenu selon les marqueurs spécifiques"""
         formatted_content = f"🔐 SAUVEGARDE CONVERSATION\n"
         formatted_content += f"📅 DATE: {date_formatted}\n"
         formatted_content += f"==================================================\n"
         
-        # Analyse ligne par ligne pour détecter les messages
-        lines = content.split('\n')
-        current_role = None
-        current_content = []
+        # Format spécifique avec "### USER" et "### ASSISTANT"
+        parts = content.split("### ")
         
-        for line in lines:
-            # Détecter les changements de locuteur
-            user_markers = ['You:', 'User:', 'Vous:', 'Utilisateur:']
-            assistant_markers = ['Assistant:', 'GreenSEO:', 'AI:']
+        for part in parts:
+            if not part.strip():
+                continue
             
-            if any(marker in line for marker in user_markers):
-                # Sauvegarder le message précédent s'il existe
-                if current_role and current_content:
-                    role_icon = "👤 VOUS" if current_role == "user" else "🤖 ASSISTANT"
-                    formatted_content += f"{role_icon}:\n"
-                    formatted_content += "\n".join(current_content).strip() + "\n"
-                    formatted_content += "--------------------\n"
-                    current_content = []
-                
-                # Commencer un nouveau message utilisateur
-                current_role = "user"
-                # Supprimer le marqueur du début de la ligne
-                for marker in user_markers:
-                    if marker in line:
-                        line = line.replace(marker, '', 1).strip()
-                        break
-                        
-                if line:  # Si la ligne n'est pas vide après suppression du marqueur
-                    current_content.append(line)
-                    
-            elif any(marker in line for marker in assistant_markers):
-                # Sauvegarder le message précédent s'il existe
-                if current_role and current_content:
-                    role_icon = "👤 VOUS" if current_role == "user" else "🤖 ASSISTANT"
-                    formatted_content += f"{role_icon}:\n"
-                    formatted_content += "\n".join(current_content).strip() + "\n"
-                    formatted_content += "--------------------\n"
-                    current_content = []
-                
-                # Commencer un nouveau message assistant
-                current_role = "assistant"
-                # Supprimer le marqueur du début de la ligne
-                for marker in assistant_markers:
-                    if marker in line:
-                        line = line.replace(marker, '', 1).strip()
-                        break
-                        
-                if line:  # Si la ligne n'est pas vide après suppression du marqueur
-                    current_content.append(line)
+            if part.startswith("USER"):
+                lines = part[4:].strip().split('\n')
+                formatted_content += f"👤 VOUS:\n"
+                formatted_content += "\n".join(lines).strip() + "\n"
+                formatted_content += "--------------------\n"
             
-            elif current_role:
-                # Continuer le message en cours
-                current_content.append(line)
-                
-        # Ajouter le dernier message s'il existe
-        if current_role and current_content:
-            role_icon = "👤 VOUS" if current_role == "user" else "🤖 ASSISTANT"
-            formatted_content += f"{role_icon}:\n"
-            formatted_content += "\n".join(current_content).strip() + "\n"
-            formatted_content += "--------------------\n"
-            
+            elif part.startswith("ASSISTANT"):
+                lines = part[9:].strip().split('\n')
+                formatted_content += f"🤖 ASSISTANT:\n"
+                formatted_content += "\n".join(lines).strip() + "\n"
+                formatted_content += "--------------------\n"
+        
         formatted_content += f"🔒 FIN SAUVEGARDE\n"
         return formatted_content
 
 def main():
-    """Fonction principale de surveillance"""
-    # Récupérer le chemin du dossier Téléchargements
+    """Fonction principale - sauvegarde manuelle"""
+    # Dossier de destination
+    txt_seo_dir = "C:\\Modelfile\\TXT-SEO"
+    
+    # Créer le convertisseur
+    saver = OllamaManualSaver(txt_seo_dir)
+    
+    print("\n💬 Convertisseur de conversations GreenSEO-AI")
+    print("🔒 Format compatible RGPD pour utilisation professionnelle")
+    
+    # Demander le chemin du fichier
     download_dir = Path.home() / "Downloads"
-    if not download_dir.exists():
-        download_dir = Path.home() / "Téléchargements"
+    print(f"\n📂 Dossier de téléchargements par défaut: {download_dir}")
     
-    # Dossier de destination Txt-AI
-    txt_ai_dir = Path.home() / "Local Sites" / "greenseo" / "app" / "public" / "wp-content" / "themes" / "geekmind-theme" / "Txt-AI"
+    # Montrer les fichiers disponibles
+    print("\nFichiers TXT disponibles dans téléchargements:")
+    txt_files = list(download_dir.glob("*.txt"))
     
-    # Créer le gestionnaire et l'observateur
-    event_handler = OllamaConversationHandler(download_dir, txt_ai_dir)
-    observer = Observer()
-    observer.schedule(event_handler, str(download_dir), recursive=False)
+    if not txt_files:
+        print("  Aucun fichier TXT trouvé dans téléchargements")
+    else:
+        for i, file in enumerate(txt_files):
+            print(f"  {i+1}. {file.name}")
     
-    # Démarrer la surveillance
-    observer.start()
+    # Demander le fichier à convertir
+    file_input = input("\n📝 Chemin complet du fichier à convertir (ou numéro de la liste ci-dessus): ")
     
-    print("🔐 Surveillance RGPD des conversations Ollama activée")
-    print("👀 Utilise le bouton de téléchargement dans Ollama WebUI")
-    print("📝 Les fichiers seront automatiquement convertis au format approprié")
-    print("⌨️ Appuyez sur Ctrl+C pour arrêter")
+    # Traiter l'entrée
+    file_to_process = None
     
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-        print("\n👋 Surveillance arrêtée")
+    if file_input.isdigit():
+        # L'utilisateur a entré un numéro de la liste
+        index = int(file_input) - 1
+        if 0 <= index < len(txt_files):
+            file_to_process = txt_files[index]
+        else:
+            print("❌ Numéro de fichier invalide")
+    else:
+        # L'utilisateur a entré un chemin complet
+        file_to_process = Path(file_input)
     
-    observer.join()
+    # Traiter le fichier
+    if file_to_process:
+        success = saver.process_conversation_file(file_to_process)
+        
+        if success:
+            print("\n✨ Conversion réussie!")
+            print(f"📂 Le fichier converti se trouve dans: {txt_seo_dir}")
+            print("🚀 Prêt pour ta présentation à l'incubateur!")
+    else:
+        print("❌ Aucun fichier à traiter")
 
 if __name__ == "__main__":
     main()
