@@ -1,5 +1,19 @@
 # 🔒 OllamaRGPDSaver & GreenSEO IA
 
+# 🌱 GreenSEO-AI
+
+Intelligence artificielle éthique pour le référencement et développement WordPress.
+
+## Notre vision
+Combiner l'intelligence artificielle avec le SEO et le développement web tout en respectant:
+- ✅ La confidentialité des données clients
+- ✅ La conformité RGPD
+- ✅ L'éthique numérique et environnementale
+
+## Solutions
+- 🧠 **GreenSEO Model**: Modèle basé sur Mistral 7B, personnalisé pour le SEO et WordPress
+- 🔒 **OllamaRGPDSaver**: Système d'archivage RGPD pour conversations IA
+
 Solution RGPD pour conversations avec modèles IA personnalisés.
 
 ## Double innovation
